@@ -76,14 +76,17 @@ function wrangler(args, { capture = false, input } = {}) {
 function ensureKv(title) {
   const list = wrangler(["kv", "namespace", "list"], { capture: true });
   if (list.ok) {
+    // Wrangler prints a JSON array (possibly after a banner); find the namespace by title.
+    const start = list.out.search(/\[\s*(\{|\])/);
     try {
-      const json = JSON.parse(list.out.slice(list.out.indexOf("[")));
+      const json = start >= 0 ? JSON.parse(list.out.slice(start, list.out.lastIndexOf("]") + 1)) : [];
       const found = json.find((ns) => ns.title === title);
       if (found) { console.log(`  Reusing KV namespace "${title}".`); return found.id; }
     } catch { /* fall through and create */ }
   }
   const created = wrangler(["kv", "namespace", "create", title], { capture: true });
-  const id = created.out.match(/\bid\s*[:=]\s*"([0-9a-f]{32})"/i)?.[1];
+  // Matches both the TOML (id = "…") and JSON ("id": "…") snippets wrangler prints.
+  const id = created.out.match(/\bid"?\s*[:=]\s*"([0-9a-f]{32})"/i)?.[1];
   if (!created.ok || !id) fail(`Creating the KV namespace failed:\n${created.out}`);
   console.log(`  Created KV namespace "${title}".`);
   return id;
