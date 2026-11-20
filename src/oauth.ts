@@ -103,7 +103,7 @@ export const login = {
             <button type="submit">Approve and sign in with Discord</button>
           </form></main></html>`, 200, {
           "Content-Type": "text/html; charset=UTF-8",
-          "Content-Security-Policy": "default-src 'none'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'",
+          "Content-Security-Policy": "default-src 'none'; form-action 'self' https://discord.com; frame-ancestors 'none'; base-uri 'none'",
           "Referrer-Policy": "same-origin",
           "Set-Cookie": flow.cookie,
         });
