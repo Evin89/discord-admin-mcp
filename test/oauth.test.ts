@@ -1,5 +1,5 @@
-import { afterEach, expect, it, vi } from "vitest";
-import { isAllowedDiscordUser, login } from "../src/oauth";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { isAllowedDiscordUser, login, sameOriginPost } from "../src/oauth";
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -57,4 +57,24 @@ it("returns 403 after Discord login for an unlisted account and never completes 
   expect(callback.headers.has("Location")).toBe(false);
   expect(upstream).toHaveBeenCalledTimes(2);
   expect(completeAuthorization).not.toHaveBeenCalled();
+});
+
+describe("sameOriginPost", () => {
+  const url = new URL("https://mcp.example.workers.dev/authorize");
+  const post = (headers: Record<string, string>) => new Request(url, { method: "POST", headers });
+  it("accepts a matching Origin", () => {
+    expect(sameOriginPost(post({ Origin: "https://mcp.example.workers.dev" }), url)).toBe(true);
+  });
+  it("rejects a foreign Origin even with same-origin fetch metadata", () => {
+    expect(sameOriginPost(post({ Origin: "https://evil.example", "Sec-Fetch-Site": "same-origin" }), url)).toBe(false);
+  });
+  it("accepts Origin: null from a same-origin form post (strict referrer policy)", () => {
+    expect(sameOriginPost(post({ Origin: "null", "Sec-Fetch-Site": "same-origin" }), url)).toBe(true);
+  });
+  it("rejects Origin: null from a cross-site post", () => {
+    expect(sameOriginPost(post({ Origin: "null", "Sec-Fetch-Site": "cross-site" }), url)).toBe(false);
+  });
+  it("rejects a post with neither header", () => {
+    expect(sameOriginPost(post({}), url)).toBe(false);
+  });
 });

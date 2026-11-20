@@ -67,6 +67,14 @@ function escapeHtml(value: string) {
   return value.replace(/[&<>"']/g, (character) => entities[character]);
 }
 
+// Browsers send `Origin: null` on form posts from pages with a strict referrer policy,
+// so fall back to Fetch Metadata. The signed, single-use flow cookie is the real CSRF guard.
+export function sameOriginPost(request: Request, url: URL): boolean {
+  const origin = request.headers.get("Origin");
+  if (origin && origin !== "null") return origin === url.origin;
+  return request.headers.get("Sec-Fetch-Site") === "same-origin";
+}
+
 export function isAllowedDiscordUser(id: unknown, env: Pick<LoginEnv, "ALLOWED_DISCORD_USER_IDS">): id is string {
   return allowed(id, env.ALLOWED_DISCORD_USER_IDS);
 }
@@ -96,11 +104,12 @@ export const login = {
           </form></main></html>`, 200, {
           "Content-Type": "text/html; charset=UTF-8",
           "Content-Security-Policy": "default-src 'none'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'",
+          "Referrer-Policy": "same-origin",
           "Set-Cookie": flow.cookie,
         });
       }
       if (url.pathname === "/authorize" && request.method === "POST") {
-        if (request.headers.get("Origin") !== url.origin) return response("Invalid consent origin.", 403);
+        if (!sameOriginPost(request, url)) return response("Invalid consent origin.", 403);
         const form = await request.formData();
         const authorization = await consumeFlow(request, url, env, String(form.get("nonce")), "consent");
         if (!authorization) return response("Consent expired or invalid. Restart authorization.", 400);
