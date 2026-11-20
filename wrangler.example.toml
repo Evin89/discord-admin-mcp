@@ -1,0 +1,31 @@
+# Template for wrangler.toml. `npm run setup` fills this in and writes wrangler.toml
+# (which is git-ignored, because it contains your own IDs).
+# To configure by hand instead: copy to wrangler.toml and replace every __PLACEHOLDER__.
+
+name = "__WORKER_NAME__"
+main = "src/index.ts"
+compatibility_date = "2026-06-28"
+compatibility_flags = ["nodejs_compat"]
+
+[dev]
+port = 8788
+
+[vars]
+# Discord user IDs allowed to sign in (comma-separated). Everyone else is refused.
+ALLOWED_DISCORD_USER_IDS = "__USER_IDS__"
+# Discord server (guild) IDs the tools may touch (comma-separated).
+ALLOWED_GUILD_IDS = "__GUILD_IDS__"
+# Exact public URL of the /mcp endpoint, e.g. https://discord-admin-mcp.<you>.workers.dev/mcp
+MCP_RESOURCE = "__MCP_RESOURCE__"
+
+[[kv_namespaces]]
+binding = "OAUTH_KV"
+id = "__KV_ID__"
+
+[[durable_objects.bindings]]
+name = "MCP_OBJECT"
+class_name = "DiscordMcp"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["DiscordMcp"]

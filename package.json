@@ -1,0 +1,32 @@
+{
+  "name": "discord-admin-mcp",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "setup": "node scripts/setup.mjs",
+    "deploy": "wrangler deploy",
+    "dev": "wrangler dev",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@cloudflare/workers-oauth-provider": "1.2.4",
+    "@modelcontextprotocol/client": "2.4.0",
+    "@modelcontextprotocol/sdk": "1.32.2",
+    "@modelcontextprotocol/server": "2.4.0",
+    "agents": "0.32.0",
+    "zod": "4.4.3"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "4.20260628.1",
+    "typescript": "6.0.3",
+    "vitest": "4.1.0",
+    "wrangler": "4.105.0"
+  },
+  "description": "Remote MCP server (Cloudflare Worker) that lets Claude and other MCP clients administer a Discord server: channels, roles, permissions, forum tags, onboarding, AutoMod, webhooks.",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  }
+}
