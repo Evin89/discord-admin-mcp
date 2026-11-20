@@ -135,7 +135,12 @@ export const login = {
             code, redirect_uri: callback, grant_type: "authorization_code",
           }),
         });
-        if (!tokenResponse.ok) return response("Discord sign-in failed.", 502, clear);
+        if (!tokenResponse.ok) {
+          // Discord's error code (e.g. invalid_client, invalid_grant) is not secret; log it for wrangler tail.
+          const detail = await tokenResponse.json().catch(() => null) as { error?: unknown } | null;
+          console.error("Discord token exchange failed:", tokenResponse.status, typeof detail?.error === "string" ? detail.error : "");
+          return response("Discord sign-in failed.", 502, clear);
+        }
         const { access_token } = await tokenResponse.json() as { access_token?: string };
         if (!access_token) return response("Discord sign-in failed.", 502, clear);
         const identity = await fetch(`${discordApi}/users/@me`, {
