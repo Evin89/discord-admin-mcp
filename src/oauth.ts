@@ -129,7 +129,7 @@ export const login = {
 
         const tokenResponse = await fetch(`${discordApi}/oauth2/token`, {
           method: "POST",
-          redirect: "error",
+          redirect: "manual",
           body: new URLSearchParams({
             client_id: env.DISCORD_CLIENT_ID, client_secret: env.DISCORD_CLIENT_SECRET,
             code, redirect_uri: callback, grant_type: "authorization_code",
@@ -139,7 +139,7 @@ export const login = {
         const { access_token } = await tokenResponse.json() as { access_token?: string };
         if (!access_token) return response("Discord sign-in failed.", 502, clear);
         const identity = await fetch(`${discordApi}/users/@me`, {
-          headers: { Authorization: `Bearer ${access_token}` }, redirect: "error",
+          headers: { Authorization: `Bearer ${access_token}` }, redirect: "manual",
         });
         if (!identity.ok) return response("Discord identity lookup failed.", 502, clear);
         const { id } = await identity.json() as { id?: unknown };
@@ -151,7 +151,9 @@ export const login = {
         return response(null, 302, { ...clear, Location: redirectTo });
       }
       return response("Not found.", 404);
-    } catch {
+    } catch (error) {
+      // Log the failure (never secrets) so `wrangler tail` shows why authorization failed.
+      console.error("authorize/callback failed:", error instanceof Error ? `${error.name}: ${error.message}` : String(error));
       return response("Authorization could not be completed.", 500);
     }
   },

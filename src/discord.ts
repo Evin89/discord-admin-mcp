@@ -36,7 +36,7 @@ export class Discord {
     }
     if (body) headers.set("Content-Type", "application/json");
     const send = () => this.fetcher(`https://discord.com/api/v10${path}`, {
-      method, headers, body: body && JSON.stringify(body), redirect: "error",
+      method, headers, body: body && JSON.stringify(body), redirect: "manual",
     });
     let response: Response;
     try {
