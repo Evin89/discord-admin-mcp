@@ -77,3 +77,19 @@ describe("Discord tools", () => {
     }
   });
 });
+
+describe("default fetcher", () => {
+  it("never calls fetch with the Discord instance as `this` (Workers: Illegal invocation)", async () => {
+    const original = globalThis.fetch;
+    globalThis.fetch = function (this: unknown) {
+      if (this !== undefined && this !== globalThis) throw new TypeError("Illegal invocation");
+      return Promise.resolve(new Response("{}", { status: 200 }));
+    } as typeof fetch;
+    try {
+      const discord = new Discord("1573273187393863851", { ALLOWED_GUILD_IDS: "1573273187393863851", DISCORD_BOT_TOKEN: "x" }, "test");
+      await expect(discord.request("/guilds/1573273187393863851")).resolves.toEqual({});
+    } finally {
+      globalThis.fetch = original;
+    }
+  });
+});

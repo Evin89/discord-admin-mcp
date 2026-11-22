@@ -17,7 +17,9 @@ export class Discord {
     guildId: string,
     private readonly config: DiscordConfig,
     private readonly tool: string,
-    private readonly fetcher: typeof fetch = fetch,
+    // Wrapped so fetch is never invoked with `this` bound to this class: Workers rejects that
+    // with "Illegal invocation".
+    private readonly fetcher: typeof fetch = (input, init) => fetch(input, init),
   ) {
     if (!allowed(guildId, config.ALLOWED_GUILD_IDS)) {
       throw new ToolError("Guild ID is outside ALLOWED_GUILD_IDS.");
@@ -51,6 +53,7 @@ export class Discord {
       }
     } catch (error) {
       if (error instanceof ToolError) throw error;
+      console.error("Discord request failed:", error instanceof Error ? `${error.name}: ${error.message}` : String(error));
       throw new ToolError("Discord request failed.");
     }
     if (response.status === 429) throw new ToolError("Discord rate limit persisted after one retry.");
