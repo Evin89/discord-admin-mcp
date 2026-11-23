@@ -146,9 +146,18 @@ export const tools = {
           id: (await guild.role(target)).id, type: 0, ...overwriteBits(allow, deny),
         }))),
         available_tags: forum?.tags && formatTags(forum.tags),
-        flags: forum?.require_tag === undefined ? undefined : forum.require_tag ? requireTagFlag : 0,
+        // Discord rejects "tag required" while the channel has no tags yet
+        // (error 40066), so a required tag is switched on in a second request.
         default_reaction_emoji: reaction(forum?.default_reaction_emoji),
       });
+      if (forum?.require_tag) {
+        try {
+          await guild.request(`/channels/${result.id}`, "PATCH", { flags: (result.flags ?? 0) | requireTagFlag });
+        } catch (error) {
+          if (!(error instanceof ToolError)) throw error;
+          throw new ToolError(`Channel was created, but requiring a tag failed. ${error.message}`);
+        }
+      }
       return named(result);
     }),
 
@@ -173,16 +182,29 @@ export const tools = {
       }
       const parentId = typeof parent === "string" ? (await guild.category(parent)).id : parent;
       const currentFlags = current.flags ?? 0;
+      const flags = require_tag === undefined ? undefined
+        : require_tag ? currentFlags | requireTagFlag : currentFlags & ~requireTagFlag;
+      // Turning "tag required" on in the same request that creates the tags
+      // fails with 40066 (the channel has no tags yet), so the flag follows the
+      // tags in a second request. Turning it off can go along with anything.
+      const deferFlags = tags !== undefined && require_tag === true;
       const patch = {
         ...settings,
         available_tags: tags && formatTags(tags, current.available_tags),
-        flags: require_tag === undefined ? undefined
-          : require_tag ? currentFlags | requireTagFlag : currentFlags & ~requireTagFlag,
+        flags: deferFlags ? undefined : flags,
         default_reaction_emoji: reaction(default_reaction_emoji),
       };
       let result = current;
       if (Object.values(patch).some((value) => value !== undefined)) {
         result = await guild.request<Channel>(`/channels/${current.id}`, "PATCH", patch);
+      }
+      if (deferFlags) {
+        try {
+          result = await guild.request<Channel>(`/channels/${current.id}`, "PATCH", { flags });
+        } catch (error) {
+          if (!(error instanceof ToolError)) throw error;
+          throw new ToolError(`Tags were updated, but requiring a tag failed. ${error.message}`);
+        }
       }
       if (position !== undefined || parentId !== undefined) {
         try {
@@ -195,10 +217,20 @@ export const tools = {
       return named(result);
     }),
 
-  set_permissions: tool("Replace one role's channel permission overwrite. Unlisted permissions become neutral.",
-    z.strictObject({ ...channelInput, ...overwriteInput }),
-    async (guild, { channel, target, allow, deny }) => {
+  set_permissions: tool("Replace one role's or member's channel permission overwrite. Unlisted permissions become neutral.",
+    z.strictObject({
+      ...channelInput, ...overwriteInput,
+      target_type: z.enum(["role", "member"]).default("role")
+        .describe("Whether target is a role (ID or name) or a member (user ID only)."),
+    }),
+    async (guild, { channel, target, allow, deny, target_type }) => {
       const bits = overwriteBits(allow, deny);
+      if (target_type === "member") {
+        if (!snowflake.safeParse(target).success) throw new ToolError("A member target must be a user ID.");
+        const current = await guild.channel(channel);
+        await guild.request(`/channels/${current.id}/permissions/${target}`, "PUT", { type: 1, ...bits });
+        return { channel_id: current.id, member_id: target };
+      }
       const [current, role] = await Promise.all([guild.channel(channel), guild.role(target)]);
       await guild.request(`/channels/${current.id}/permissions/${role.id}`, "PUT", { type: 0, ...bits });
       return { channel_id: current.id, role_id: role.id };
@@ -321,6 +353,17 @@ export const tools = {
     z.strictObject({ ...channelInput, message_id: messageId }), async (guild, { channel, message_id }) => {
       await guild.request(`${await messagePath(guild, channel)}/pins/${message_id}`, "PUT");
       return { id: message_id, pinned: true };
+    }),
+
+  crosspost_message: tool("Publish a message in an announcement channel to every server that follows it.",
+    z.strictObject({ ...channelInput, message_id: messageId }), async (guild, { channel, message_id }) => {
+      const current = await guild.channel(channel);
+      if (current.type !== channelTypes.announcement) {
+        throw new ToolError("Only messages in an announcement channel can be published.");
+      }
+      const message = await guild.request<{ id: string; flags?: number }>(
+        `/channels/${current.id}/messages/${message_id}/crosspost`, "POST");
+      return { id: message.id, published: true };
     }),
 
   create_webhook: tool("Create a channel webhook. Reveal its credential-bearing URL only on explicit request.",
