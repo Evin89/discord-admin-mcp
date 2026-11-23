@@ -40,8 +40,8 @@ Finding IDs: Discord *User Settings → Advanced → Developer Mode*, then right
 | `list_webhooks` | Webhook IDs, names, channels. Never tokens or URLs |
 | `get_onboarding`, `list_automod_rules` | Read onboarding and AutoMod config |
 | `create_channel` | Text, announcement, forum, category or voice; overwrites; forum tags, require-tag, default reaction |
-| `edit_channel` | Rename, move, topic or guidelines, slowmode, forum tags (existing tag IDs are kept by name) |
-| `set_permissions` | Set allow/deny for a role or `@everyone` on a channel; anything unlisted becomes neutral |
+| `edit_channel` | Rename, move, topic or guidelines, slowmode, forum tags (existing tag IDs are kept by name); "tag required" is applied after the tags exist, so both can be set in one call |
+| `set_permissions` | Set allow/deny for a role, `@everyone` or a member (`target_type: "member"`, user ID) on a channel; anything unlisted becomes neutral |
 | `sync_permissions_with_category` | Copy the category's overwrites onto a channel |
 | `create_role`, `edit_role` | Name, colour, hoist, mentionable, permissions |
 | `delete_channel` | Only with `confirm_name` equal to the channel's current name |
@@ -49,6 +49,7 @@ Finding IDs: Discord *User Settings → Advanced → Developer Mode*, then right
 | `create_automod_rule` | Presets: `spam`, `mention_spam`, `keyword_preset` |
 | `create_invite` | Invites, permanent by default |
 | `send_message`, `edit_message`, `pin_message` | Bot messages, no pings by default |
+| `crosspost_message` | Publish a message in an announcement channel to the servers that follow it |
 | `create_webhook` | Returns the URL only with `reveal_url: true` |
 
 Channels and roles can be referenced by ID or exact name (case-insensitive); ambiguous names return an error listing the matches. Permissions use Discord's flag names (`VIEW_CHANNEL`, `SEND_MESSAGES`, `MANAGE_THREADS`, …).
