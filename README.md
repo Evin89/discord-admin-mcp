@@ -1,4 +1,6 @@
-# discord-admin-mcp
+# Rigger – Discord MCP
+
+_A Builder Basement project. Repository: `discord-admin-mcp`. Self-hosted only: everyone runs their own instance._
 
 A remote [MCP](https://modelcontextprotocol.io) server that lets Claude (or any MCP client that supports remote servers with OAuth) **administer a Discord server**: channels and categories, roles, permission overwrites, forum tags, onboarding, AutoMod, invites, messages and webhooks.
 
